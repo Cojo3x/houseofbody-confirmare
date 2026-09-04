@@ -17,7 +17,7 @@ app = Flask(__name__)
 GOOGLE_CREDENTIALS_JSON = os.environ.get("GOOGLE_CREDENTIALS_JSON")
 CALENDAR_ID = os.environ.get("CALENDAR_ID", "primary")
 
-BREVO_API_KEY = os.environ.get("BREVO_API_KEY")
+SMTP2GO_API_KEY = os.environ.get("SMTP2GO_API_KEY")
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL")
 OWNER_EMAIL = os.environ.get("OWNER_EMAIL")
 
@@ -64,23 +64,26 @@ def sterge_trebuie_din_titlu(event):
 
 
 def trimite_email(destinatar, subiect, continut):
-    """Trimite un email prin Brevo API (HTTPS, port 443 - nu e blocat
+    """Trimite un email prin SMTP2GO API (HTTPS, port 443 - nu e blocat
     de host-uri gratuite, spre deosebire de SMTP)."""
-    url = "https://api.brevo.com/v3/smtp/email"
+    url = "https://api.smtp2go.com/v3/email/send"
     headers = {
-        "api-key": BREVO_API_KEY,
         "Content-Type": "application/json",
+        "X-Smtp2go-Api-Key": SMTP2GO_API_KEY,
         "Accept": "application/json"
     }
     payload = {
-        "sender": {"email": SENDER_EMAIL},
-        "to": [{"email": destinatar}],
+        "sender": SENDER_EMAIL,
+        "to": [destinatar],
         "subject": subiect,
-        "textContent": continut
+        "text_body": continut
     }
     response = requests.post(url, headers=headers, json=payload, timeout=15)
-    if response.status_code >= 300:
-        raise Exception(f"Brevo a raspuns cu eroare {response.status_code}: {response.text}")
+    data = response.json() if response.headers.get("Content-Type", "").startswith("application/json") else {}
+    esuat = data.get("data", {}).get("failed", 0)
+
+    if response.status_code >= 300 or esuat:
+        raise Exception(f"SMTP2GO a raspuns cu eroare: {response.text}")
 
 
 # ==================================================================
