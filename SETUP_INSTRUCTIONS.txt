@@ -6,9 +6,9 @@ dar are nevoie de "chei de acces" pe care le obtii mai jos.
 
 Aceasta varianta este 100% GRATUITA:
 - Google Calendar API: gratuit
-- Brevo (notificare automata catre tine prin email, via API HTTPS -
+- SMTP2GO (notificare automata catre tine prin email, via API HTTPS -
   NU e blocat de Render, spre deosebire de SMTP): gratuit pana la
-  300 emailuri/zi
+  1000 emailuri/luna, fara card bancar
 - WhatsApp catre client: prin link wa.me, tu apesi Send o data
   (gratuit, foloseste WhatsApp-ul tau normal, fara risc de blocare)
 =====================================================================
@@ -44,30 +44,32 @@ calendarul tau Google.
     Partea 3.
 
 
-PARTEA 2: BREVO - trimitere automata de email (notificare catre tine)
+PARTEA 2: SMTP2GO - trimitere automata de email (notificare catre tine)
 =====================================================================
 
 Scop: cand clientul confirma, sa primesti automat un email cu link-ul
-de confirmare finala. Brevo trimite prin API HTTPS, deci functioneaza
-pe Render fara sa fie blocat (spre deosebire de SMTP).
+de confirmare finala. SMTP2GO trimite prin API HTTPS, deci
+functioneaza pe Render fara sa fie blocat (spre deosebire de SMTP).
 
-1. Mergi pe https://www.brevo.com/ si creeaza un cont gratuit
-   (nu necesita card bancar).
-2. Dupa ce te loghezi, mergi la sectiunea "SMTP & API" din meniu
-   (de obicei sub numele de cont / Settings).
-3. Alege tab-ul "API Keys" si apasa "Generate a new API key".
-   Da-i un nume (ex: "houseofbody-app") si genereaza.
-   COPIAZA cheia afisata - nu se mai poate vedea din nou dupa ce
-   inchizi fereastra. Ai nevoie de ea la Partea 3.
-4. IMPORTANT - adresa de trimitere: Brevo cere ca adresa "From"
+1. Mergi pe https://www.smtp2go.com/ si creeaza un cont gratuit
+   (nu necesita card bancar, 1000 emailuri/luna gratuit).
+2. Dupa ce te loghezi, mergi la sectiunea "Sending" -> "API Keys"
+   din meniul din stanga.
+3. Apasa "Add API Key", da-i un nume (ex: "houseofbody-app").
+4. IMPORTANT: la crearea cheii, in tab-ul "Permissions" bifeaza
+   optiunea "Emails" (sau similar - permisiunea de trimitere).
+   Fara aceasta bifa, cheia va da eroare de tip "Permission Denied"
+   cand incerci sa trimiti.
+5. Salveaza si COPIAZA cheia generata - nu se mai poate vedea din
+   nou dupa ce inchizi fereastra. Ai nevoie de ea la Partea 3.
+6. IMPORTANT - adresa de trimitere: SMTP2GO cere ca adresa "From"
    (cea care trimite email-ul) sa fie verificata:
-   - Mergi la Settings -> Senders, Domains & Dedicated IPs -> Senders.
+   - Mergi la "Sending" -> "Sender Domains" sau "Verified Senders".
    - Adauga adresa de email de la care vrei sa "para" ca vine
-     notificarea (poate fi orice adresa la care ai acces, ex: chiar
-     adresa ta personala).
-   - Brevo iti trimite un email de confirmare pe acea adresa - deschide-l
-     si confirma.
-5. Odata verificata, acea adresa devine SENDER_EMAIL (Partea 3).
+     notificarea (poate fi orice adresa la care ai acces).
+   - SMTP2GO iti trimite un email de confirmare pe acea adresa -
+     deschide-l si confirma.
+7. Odata verificata, acea adresa devine SENDER_EMAIL (Partea 3).
    OWNER_EMAIL (unde primesti TU notificarea) poate fi orice adresa,
    nu are nevoie de verificare.
 
@@ -85,8 +87,8 @@ PARTEA 3: SETAREA VARIABILELOR IN RENDER
    CALENDAR_ID
    -> ID-ul copiat la Partea 1, pasul 13
 
-   BREVO_API_KEY
-   -> cheia generata la Partea 2, pasul 3
+   SMTP2GO_API_KEY
+   -> cheia generata la Partea 2, pasul 5
 
    SENDER_EMAIL
    -> adresa verificata la Partea 2, pasul 4
