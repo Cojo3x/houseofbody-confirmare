@@ -142,8 +142,7 @@ def confirmare_client(cod, telefon):
     try:
         trimite_email(
             OWNER_EMAIL,
-            "Client nou confirmat - programare",
-            f"{nume_client} a confirmat sedinta de la ora {ora_start}.\n\n"
+            "{nume_client} a confirmat sedinta de la ora {ora_start}",
             f"Apasa aici pentru a trimite confirmarea finala catre client pe WhatsApp:\n"
             f"{link_owner}"
         )
