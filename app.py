@@ -152,7 +152,7 @@ def confirmare_client(cod, telefon):
             f"email a esuat: {e}"
         ), 500
 
-    return "Multumim! Programarea ta a fost inregistrata ca si confirmata."
+    return "", 204
 
 
 # ==================================================================
@@ -165,7 +165,7 @@ def confirmare_client(cod, telefon):
 def confirmare_owner(cod, telefon):
 
     mesaj = (
-        "Buna! Programarea dumneavoastra a fost confirmata de echipa noastra. "
+        "Programarea a fost confirmata de echipa noastra. "
         "Va asteptam!"
     )
 
