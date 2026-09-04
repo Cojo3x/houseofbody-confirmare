@@ -1,8 +1,7 @@
 import os
 import json
 import re
-import smtplib
-from email.mime.text import MIMEText
+import requests
 from urllib.parse import quote
 from flask import Flask, redirect
 from google.oauth2 import service_account
@@ -18,8 +17,8 @@ app = Flask(__name__)
 GOOGLE_CREDENTIALS_JSON = os.environ.get("GOOGLE_CREDENTIALS_JSON")
 CALENDAR_ID = os.environ.get("CALENDAR_ID", "primary")
 
-EMAIL_ADDRESS = os.environ.get("EMAIL_ADDRESS")
-EMAIL_APP_PASSWORD = os.environ.get("EMAIL_APP_PASSWORD")
+BREVO_API_KEY = os.environ.get("BREVO_API_KEY")
+SENDER_EMAIL = os.environ.get("SENDER_EMAIL")
 OWNER_EMAIL = os.environ.get("OWNER_EMAIL")
 
 BASE_URL = "https://confirmare.houseofbody.ro"
@@ -65,15 +64,23 @@ def sterge_trebuie_din_titlu(event):
 
 
 def trimite_email(destinatar, subiect, continut):
-    """Trimite un email simplu prin Yahoo SMTP (gratuit)."""
-    msg = MIMEText(continut)
-    msg["Subject"] = subiect
-    msg["From"] = EMAIL_ADDRESS
-    msg["To"] = destinatar
-
-    with smtplib.SMTP_SSL("smtp.mail.yahoo.com", 465) as server:
-        server.login(EMAIL_ADDRESS, EMAIL_APP_PASSWORD)
-        server.sendmail(EMAIL_ADDRESS, destinatar, msg.as_string())
+    """Trimite un email prin Brevo API (HTTPS, port 443 - nu e blocat
+    de host-uri gratuite, spre deosebire de SMTP)."""
+    url = "https://api.brevo.com/v3/smtp/email"
+    headers = {
+        "api-key": BREVO_API_KEY,
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    }
+    payload = {
+        "sender": {"email": SENDER_EMAIL},
+        "to": [{"email": destinatar}],
+        "subject": subiect,
+        "textContent": continut
+    }
+    response = requests.post(url, headers=headers, json=payload, timeout=15)
+    if response.status_code >= 300:
+        raise Exception(f"Brevo a raspuns cu eroare {response.status_code}: {response.text}")
 
 
 # ==================================================================
