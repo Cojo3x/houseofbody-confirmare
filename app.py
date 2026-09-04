@@ -112,7 +112,7 @@ def confirmare_client(cod, telefon):
 def confirmare_owner(cod, telefon):
 
     mesaj = (
-        "Buna! Programarea dumneavoastra a fost confirmata de echipa noastra. "
+        "Programarea dumneavoastra a fost confirmata de echipa noastra. "
         "Va asteptam!"
     )
 
