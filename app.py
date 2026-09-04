@@ -25,6 +25,18 @@ BASE_URL = "https://confirmare.houseofbody.ro"
 
 
 # ==================================================================
+# RUTA HOME: pagina goala (fara cod si telefon in link)
+# ==================================================================
+
+@app.route('/')
+def home():
+    return (
+        "Acest link nu este complet. Foloseste link-ul primit prin "
+        "WhatsApp sau email, care contine un cod de confirmare."
+    )
+
+
+# ==================================================================
 # FUNCTII AJUTATOARE
 # ==================================================================
 
@@ -39,7 +51,7 @@ def get_calendar_service():
 
 
 def sterge_trebuie_din_titlu(event):
-    """Elimina cuvantul 'Trebuie ' din titlul evenimentului, curatand
+    """Elimina cuvantul 'Trebuie' din titlul evenimentului, curatand
     si eventualele spatii sau liniute ramase in urma stergerii."""
     titlu_vechi = event.get("summary", "")
     titlu_nou = titlu_vechi.replace("Trebuie ", "")
