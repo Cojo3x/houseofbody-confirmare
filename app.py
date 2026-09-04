@@ -39,10 +39,10 @@ def get_calendar_service():
 
 
 def sterge_trebuie_din_titlu(event):
-    """Elimina cuvantul 'Trebuie' din titlul evenimentului, curatand
+    """Elimina cuvantul 'Trebuie ' din titlul evenimentului, curatand
     si eventualele spatii sau liniute ramase in urma stergerii."""
     titlu_vechi = event.get("summary", "")
-    titlu_nou = titlu_vechi.replace("Trebuie", "")
+    titlu_nou = titlu_vechi.replace("Trebuie ", "")
     titlu_nou = titlu_nou.strip()
     titlu_nou = titlu_nou.lstrip("-").strip()
     return titlu_nou
