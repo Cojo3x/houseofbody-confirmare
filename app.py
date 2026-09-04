@@ -1,5 +1,6 @@
 import os
 import json
+import re
 import smtplib
 from email.mime.text import MIMEText
 from urllib.parse import quote
@@ -51,10 +52,13 @@ def get_calendar_service():
 
 
 def sterge_trebuie_din_titlu(event):
-    """Elimina cuvantul 'Trebuie' din titlul evenimentului, curatand
-    si eventualele spatii sau liniute ramase in urma stergerii."""
+    """Elimina cuvantul 'Trebuie' (si spatiul de dupa el, daca exista)
+    din titlul evenimentului, indiferent de majuscule/minuscule
+    (Trebuie, trebuie, TREBUIE etc.), curatand si eventualele spatii
+    duble sau liniute ramase in urma stergerii."""
     titlu_vechi = event.get("summary", "")
-    titlu_nou = titlu_vechi.replace("Trebuie ", "")
+    titlu_nou = re.sub(r"trebuie\s?", "", titlu_vechi, flags=re.IGNORECASE)
+    titlu_nou = re.sub(r"\s{2,}", " ", titlu_nou)  # curata spatii duble ramase
     titlu_nou = titlu_nou.strip()
     titlu_nou = titlu_nou.lstrip("-").strip()
     return titlu_nou
@@ -124,7 +128,7 @@ def confirmare_client(cod, telefon):
 def confirmare_owner(cod, telefon):
 
     mesaj = (
-        "Programarea dumneavoastra a fost confirmata de echipa noastra. "
+        "Buna! Programarea dumneavoastra a fost confirmata de echipa noastra. "
         "Va asteptam!"
     )
 
