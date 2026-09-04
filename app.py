@@ -2,6 +2,7 @@ import os
 import json
 import re
 import requests
+from datetime import datetime
 from urllib.parse import quote
 from flask import Flask, redirect
 from google.oauth2 import service_account
@@ -63,6 +64,30 @@ def sterge_trebuie_din_titlu(event):
     return titlu_nou
 
 
+def extrage_nume_client(event):
+    """Extrage numele clientului din titlul evenimentului, presupunand
+    formatul 'Nume Prenume <tip serviciu> trebuie confirmat'. Numele
+    este format mereu din exact 2 cuvinte, primele din titlu."""
+    titlu = event.get("summary", "")
+    cuvinte = titlu.split()
+    nume = " ".join(cuvinte[:2]) if len(cuvinte) >= 2 else titlu
+    return nume.title()
+
+
+def obtine_ora_start(event):
+    """Extrage ora de start a evenimentului din Google Calendar si o
+    formateaza ca HH:MM. Daca evenimentul e 'toata ziua' (fara ora
+    exacta), returneaza un text alternativ."""
+    start = event.get("start", {})
+    dt_str = start.get("dateTime")
+
+    if not dt_str:
+        return "toata ziua"
+
+    dt = datetime.fromisoformat(dt_str)
+    return dt.strftime("%H:%M")
+
+
 def trimite_email(destinatar, subiect, continut):
     """Trimite un email prin SMTP2GO API (HTTPS, port 443 - nu e blocat
     de host-uri gratuite, spre deosebire de SMTP)."""
@@ -99,6 +124,9 @@ def confirmare_client(cod, telefon):
         service = get_calendar_service()
         event = service.events().get(calendarId=CALENDAR_ID, eventId=cod).execute()
 
+        nume_client = extrage_nume_client(event)
+        ora_start = obtine_ora_start(event)
+
         event["summary"] = sterge_trebuie_din_titlu(event)
 
         service.events().update(
@@ -115,7 +143,7 @@ def confirmare_client(cod, telefon):
         trimite_email(
             OWNER_EMAIL,
             "Client nou confirmat - programare",
-            f"Un client a confirmat programarea (cod {cod}).\n\n"
+            f"{nume_client} a confirmat sedinta de la ora {ora_start}.\n\n"
             f"Apasa aici pentru a trimite confirmarea finala catre client pe WhatsApp:\n"
             f"{link_owner}"
         )
