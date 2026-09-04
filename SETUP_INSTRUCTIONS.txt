@@ -6,7 +6,9 @@ dar are nevoie de "chei de acces" pe care le obtii mai jos.
 
 Aceasta varianta este 100% GRATUITA:
 - Google Calendar API: gratuit
-- Yahoo Mail SMTP (notificare automata catre tine): gratuit
+- Brevo (notificare automata catre tine prin email, via API HTTPS -
+  NU e blocat de Render, spre deosebire de SMTP): gratuit pana la
+  300 emailuri/zi
 - WhatsApp catre client: prin link wa.me, tu apesi Send o data
   (gratuit, foloseste WhatsApp-ul tau normal, fara risc de blocare)
 =====================================================================
@@ -42,34 +44,32 @@ calendarul tau Google.
     Partea 3.
 
 
-PARTEA 2: YAHOO MAIL - trimitere automata de email (notificare catre tine)
+PARTEA 2: BREVO - trimitere automata de email (notificare catre tine)
 =====================================================================
 
 Scop: cand clientul confirma, sa primesti automat un email cu link-ul
-de confirmare finala. Complet gratuit, foloseste contul tau de Yahoo.
+de confirmare finala. Brevo trimite prin API HTTPS, deci functioneaza
+pe Render fara sa fie blocat (spre deosebire de SMTP).
 
-1. Foloseste un cont Yahoo Mail (cel personal, sau unul creat special
-   pentru aplicatie).
-2. Acel cont TREBUIE sa aiba activata verificarea in 2 pasi:
-   - Mergi pe https://login.yahoo.com/account/security
-   - Activeaza "Two-step verification" daca nu e deja activa
-     (de obicei prin SMS sau aplicatia Yahoo).
-3. Dupa activare, tot in pagina de Security, cauta optiunea
-   "Generate app password" (Genereaza parola pentru aplicatii):
-   - Poate aparea si sub numele "App passwords" sau
-     "Manage app passwords".
-   - Alege "Other App" (sau similar) si da-i un nume
-     (ex: "houseofbody-app").
-   - Yahoo iti va afisa o parola generata automat. COPIAZ-O - nu se
-     mai poate vedea din nou dupa ce inchizi fereastra.
-4. Aceasta parola generata NU e parola normala de Yahoo - e o parola
-   speciala doar pentru aplicatii. Ai nevoie de ea la Partea 3.
-
-NOTA: daca optiunea de "app password" nu apare deloc in setari, s-ar
-putea sa fie nevoie sa activezi mai intai verificarea in 2 pasi si sa
-astepti cateva minute, sau sa cauti in Yahoo Help dupa "generate app
-password" - Yahoo schimba uneori denumirile si locatia acestei optiuni
-in interfata.
+1. Mergi pe https://www.brevo.com/ si creeaza un cont gratuit
+   (nu necesita card bancar).
+2. Dupa ce te loghezi, mergi la sectiunea "SMTP & API" din meniu
+   (de obicei sub numele de cont / Settings).
+3. Alege tab-ul "API Keys" si apasa "Generate a new API key".
+   Da-i un nume (ex: "houseofbody-app") si genereaza.
+   COPIAZA cheia afisata - nu se mai poate vedea din nou dupa ce
+   inchizi fereastra. Ai nevoie de ea la Partea 3.
+4. IMPORTANT - adresa de trimitere: Brevo cere ca adresa "From"
+   (cea care trimite email-ul) sa fie verificata:
+   - Mergi la Settings -> Senders, Domains & Dedicated IPs -> Senders.
+   - Adauga adresa de email de la care vrei sa "para" ca vine
+     notificarea (poate fi orice adresa la care ai acces, ex: chiar
+     adresa ta personala).
+   - Brevo iti trimite un email de confirmare pe acea adresa - deschide-l
+     si confirma.
+5. Odata verificata, acea adresa devine SENDER_EMAIL (Partea 3).
+   OWNER_EMAIL (unde primesti TU notificarea) poate fi orice adresa,
+   nu are nevoie de verificare.
 
 
 PARTEA 3: SETAREA VARIABILELOR IN RENDER
@@ -85,16 +85,15 @@ PARTEA 3: SETAREA VARIABILELOR IN RENDER
    CALENDAR_ID
    -> ID-ul copiat la Partea 1, pasul 13
 
-   EMAIL_ADDRESS
-   -> adresa de Yahoo folosita la Partea 2 (ex: houseofbody.notificari@yahoo.com)
+   BREVO_API_KEY
+   -> cheia generata la Partea 2, pasul 3
 
-   EMAIL_APP_PASSWORD
-   -> parola generata la Partea 2, pasul 3 (scrie-o exact cum
-      a afisat-o Yahoo, fara spatii in plus)
+   SENDER_EMAIL
+   -> adresa verificata la Partea 2, pasul 4
 
    OWNER_EMAIL
    -> adresa TA de email, unde vrei sa primesti notificarile
-      (poate fi aceeasi ca EMAIL_ADDRESS sau alta)
+      (poate fi aceeasi ca SENDER_EMAIL sau alta)
 
 3. Salveaza. Render va reporni automat aplicatia cu noile variabile.
 
@@ -122,6 +121,7 @@ DE TESTAT LA FINAL
 - Verifica:
   1) titlul evenimentului din Google Calendar si-a pierdut cuvantul
      "Trebuie"
-  2) ai primit un email cu link-ul de confirmare finala
+  2) ai primit un email (verifica si folder-ul Spam prima data) cu
+     link-ul de confirmare finala
   3) dai click pe linkul din email -> se deschide automat WhatsApp
      cu mesajul deja scris catre numarul de test -> apesi Send
