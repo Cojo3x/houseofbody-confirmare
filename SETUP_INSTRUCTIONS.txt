@@ -1,0 +1,127 @@
+GHID DE CONFIGURARE (varianta cost zero)
+=====================================================================
+Acest fisier explica pasii pe care trebuie sa-i faci TU, in afara
+codului, ca aplicatia sa functioneze. Codul (app.py) este deja gata,
+dar are nevoie de "chei de acces" pe care le obtii mai jos.
+
+Aceasta varianta este 100% GRATUITA:
+- Google Calendar API: gratuit
+- Yahoo Mail SMTP (notificare automata catre tine): gratuit
+- WhatsApp catre client: prin link wa.me, tu apesi Send o data
+  (gratuit, foloseste WhatsApp-ul tau normal, fara risc de blocare)
+=====================================================================
+
+
+PARTEA 1: GOOGLE CALENDAR API
+=====================================================================
+
+Scop: sa dam voie aplicatiei Flask sa editeze evenimente in
+calendarul tau Google.
+
+1. Mergi pe https://console.cloud.google.com/
+2. Creeaza un proiect nou (sau foloseste unul existent).
+3. In meniul din stanga: "APIs & Services" -> "Library".
+4. Cauta "Google Calendar API" si apasa "Enable".
+5. Mergi la "APIs & Services" -> "Credentials".
+6. Apasa "Create Credentials" -> "Service Account".
+7. Da-i un nume (ex: "houseofbody-calendar-bot") si finalizeaza crearea.
+8. Dupa ce contul de serviciu e creat, intra pe el -> tab "Keys" ->
+   "Add Key" -> "Create new key" -> tip JSON -> Create.
+   Se va descarca un fisier .json pe calculatorul tau. PASTREAZA-L,
+   e nevoie de continutul lui la Partea 3.
+9. Din acelasi ecran de Service Account, copiaza adresa de email
+   (arata cam asa: houseofbody-calendar-bot@nume-proiect.iam.gserviceaccount.com)
+10. Deschide Google Calendar (calendar.google.com) cu contul tau normal.
+11. Gaseste calendarul folosit pentru programari -> Settings and sharing.
+12. La "Share with specific people" adauga adresa de email de la
+    pasul 9, cu permisiunea "Make changes to events".
+13. Tot in Settings, sub "Integrate calendar", copiaza "Calendar ID"
+    (daca folosesti calendarul principal al contului tau, ID-ul e
+    chiar adresa ta de gmail; altfel e ceva de tipul
+    xxxxxxx@group.calendar.google.com). Ai nevoie de acest ID la
+    Partea 3.
+
+
+PARTEA 2: YAHOO MAIL - trimitere automata de email (notificare catre tine)
+=====================================================================
+
+Scop: cand clientul confirma, sa primesti automat un email cu link-ul
+de confirmare finala. Complet gratuit, foloseste contul tau de Yahoo.
+
+1. Foloseste un cont Yahoo Mail (cel personal, sau unul creat special
+   pentru aplicatie).
+2. Acel cont TREBUIE sa aiba activata verificarea in 2 pasi:
+   - Mergi pe https://login.yahoo.com/account/security
+   - Activeaza "Two-step verification" daca nu e deja activa
+     (de obicei prin SMS sau aplicatia Yahoo).
+3. Dupa activare, tot in pagina de Security, cauta optiunea
+   "Generate app password" (Genereaza parola pentru aplicatii):
+   - Poate aparea si sub numele "App passwords" sau
+     "Manage app passwords".
+   - Alege "Other App" (sau similar) si da-i un nume
+     (ex: "houseofbody-app").
+   - Yahoo iti va afisa o parola generata automat. COPIAZ-O - nu se
+     mai poate vedea din nou dupa ce inchizi fereastra.
+4. Aceasta parola generata NU e parola normala de Yahoo - e o parola
+   speciala doar pentru aplicatii. Ai nevoie de ea la Partea 3.
+
+NOTA: daca optiunea de "app password" nu apare deloc in setari, s-ar
+putea sa fie nevoie sa activezi mai intai verificarea in 2 pasi si sa
+astepti cateva minute, sau sa cauti in Yahoo Help dupa "generate app
+password" - Yahoo schimba uneori denumirile si locatia acestei optiuni
+in interfata.
+
+
+PARTEA 3: SETAREA VARIABILELOR IN RENDER
+=====================================================================
+
+1. In dashboard-ul Render, intra pe serviciul tau -> Environment.
+2. Adauga urmatoarele variabile:
+
+   GOOGLE_CREDENTIALS_JSON
+   -> lipeste AICI tot continutul fisierului .json descarcat la
+      Partea 1, pasul 8 (deschide-l cu Notepad, copiaza tot textul)
+
+   CALENDAR_ID
+   -> ID-ul copiat la Partea 1, pasul 13
+
+   EMAIL_ADDRESS
+   -> adresa de Yahoo folosita la Partea 2 (ex: houseofbody.notificari@yahoo.com)
+
+   EMAIL_APP_PASSWORD
+   -> parola generata la Partea 2, pasul 3 (scrie-o exact cum
+      a afisat-o Yahoo, fara spatii in plus)
+
+   OWNER_EMAIL
+   -> adresa TA de email, unde vrei sa primesti notificarile
+      (poate fi aceeasi ca EMAIL_ADDRESS sau alta)
+
+3. Salveaza. Render va reporni automat aplicatia cu noile variabile.
+
+
+PARTEA 4: DEPLOYMENT
+=====================================================================
+
+1. Urca fisierele app.py si requirements.txt intr-un repository
+   GitHub (poti crea unul nou, ex: "houseofbody-confirmare", sau
+   folosesti unul existent).
+2. In Render, conecteaza acel repository ca Web Service (sau
+   actualizeaza-l pe cel existent, daca deja ai unul legat).
+3. Build Command: pip install -r requirements.txt
+4. Start Command: gunicorn app:app
+5. Deploy.
+
+
+DE TESTAT LA FINAL
+=====================================================================
+
+- Acceseaza manual in browser (inlocuieste cu un ID real de eveniment
+  din calendarul tau si un numar de telefon real):
+  https://confirmare.houseofbody.ro/ID_REAL_EVENIMENT/40712345678
+
+- Verifica:
+  1) titlul evenimentului din Google Calendar si-a pierdut cuvantul
+     "Trebuie"
+  2) ai primit un email cu link-ul de confirmare finala
+  3) dai click pe linkul din email -> se deschide automat WhatsApp
+     cu mesajul deja scris catre numarul de test -> apesi Send
