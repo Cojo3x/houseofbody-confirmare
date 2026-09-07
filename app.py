@@ -2,7 +2,6 @@ import os
 import json
 import re
 import requests
-from datetime import datetime
 from urllib.parse import quote
 from flask import Flask, redirect
 from google.oauth2 import service_account
@@ -64,28 +63,13 @@ def sterge_trebuie_din_titlu(event):
     return titlu_nou
 
 
-def extrage_nume_client(event):
-    """Extrage numele clientului din titlul evenimentului, presupunand
-    formatul 'Nume Prenume <tip serviciu> trebuie confirmat'. Numele
-    este format mereu din exact 2 cuvinte, primele din titlu."""
+def extrage_nume_din_titlu(event):
+    """Extrage numele clientului din primele doua cuvinte ale
+    titlului evenimentului (ex: 'Ion Popescu - Trebuie confirmat'
+    -> 'Ion Popescu')."""
     titlu = event.get("summary", "")
     cuvinte = titlu.split()
-    nume = " ".join(cuvinte[:2]) if len(cuvinte) >= 2 else titlu
-    return nume.title()
-
-
-def obtine_ora_start(event):
-    """Extrage ora de start a evenimentului din Google Calendar si o
-    formateaza ca HH:MM. Daca evenimentul e 'toata ziua' (fara ora
-    exacta), returneaza un text alternativ."""
-    start = event.get("start", {})
-    dt_str = start.get("dateTime")
-
-    if not dt_str:
-        return "toata ziua"
-
-    dt = datetime.fromisoformat(dt_str)
-    return dt.strftime("%H:%M")
+    return " ".join(cuvinte[:2]) if cuvinte else "client"
 
 
 def trimite_email(destinatar, subiect, continut):
@@ -124,9 +108,6 @@ def confirmare_client(cod, telefon):
         service = get_calendar_service()
         event = service.events().get(calendarId=CALENDAR_ID, eventId=cod).execute()
 
-        nume_client = extrage_nume_client(event)
-        ora_start = obtine_ora_start(event)
-
         event["summary"] = sterge_trebuie_din_titlu(event)
 
         service.events().update(
@@ -142,7 +123,8 @@ def confirmare_client(cod, telefon):
     try:
         trimite_email(
             OWNER_EMAIL,
-            f"{nume_client} a confirmat sedinta de la ora {ora_start}",
+            "Client nou confirmat - programare",
+            f"Un client a confirmat programarea (cod {cod}).\n\n"
             f"Apasa aici pentru a trimite confirmarea finala catre client pe WhatsApp:\n"
             f"{link_owner}"
         )
@@ -165,12 +147,43 @@ def confirmare_client(cod, telefon):
 def confirmare_owner(cod, telefon):
 
     mesaj = (
-        "Programarea a fost confirmata de echipa noastra. "
+        "Buna! Programarea dumneavoastra a fost confirmata de echipa noastra. "
         "Va asteptam!"
     )
 
     link_whatsapp = f"https://wa.me/{telefon}?text={quote(mesaj)}"
     return redirect(link_whatsapp)
+
+
+# ==================================================================
+# RUTA 3: Clientul cere reprogramare (nu poate veni)
+# Link primit prin WhatsApp: confirmare.houseofbody.ro/reprogramare/<cod>/<telefon>
+# Numele clientului e preluat automat din Google Calendar (primele
+# doua cuvinte din titlul evenimentului), nu din link.
+# ==================================================================
+
+@app.route('/reprogramare/<cod>/<telefon>')
+def reprogramare_client(cod, telefon):
+
+    try:
+        service = get_calendar_service()
+        event = service.events().get(calendarId=CALENDAR_ID, eventId=cod).execute()
+        nume = extrage_nume_din_titlu(event)
+    except Exception as e:
+        return f"A aparut o eroare la citirea programarii din calendar: {e}", 500
+
+    try:
+        trimite_email(
+            OWNER_EMAIL,
+            f"Reprogramare-{nume}",
+            f"Clientul {nume} (telefon {telefon}) a cerut reprogramarea "
+            f"programarii cu codul {cod}.\n\n"
+            f"Contacteaza-l pe WhatsApp cat mai curand posibil."
+        )
+    except Exception as e:
+        return f"A aparut o eroare la trimiterea notificarii: {e}", 500
+
+    return "Veti fi contactat pe WhatsApp cat mai curand posibil."
 
 
 if __name__ == '__main__':
