@@ -72,6 +72,60 @@ def extrage_nume_din_titlu(event):
     return " ".join(cuvinte[:2]) if cuvinte else "client"
 
 
+def extrage_ora_eveniment(event):
+    """Extrage ora de inceput a evenimentului, in format HH:MM."""
+    from datetime import datetime
+
+    start = event.get("start", {})
+    data_ora = start.get("dateTime")
+
+    if not data_ora:
+        return "(toata ziua)"
+
+    dt = datetime.fromisoformat(data_ora)
+    return dt.strftime("%H:%M")
+
+
+def verifica_si_actualizeaza_reprogramare(service, cod, event):
+    """Verifica ziua evenimentului:
+    - daca e VINERI (weekday 4), sterge evenimentul din calendar
+    - altfel, muta evenimentul cu o zi (maine), pastrand aceeasi ora
+    Returneaza 'sters' sau 'mutat'."""
+    from datetime import datetime, timedelta
+
+    start = event.get("start", {})
+    end = event.get("end", {})
+
+    are_ora = "dateTime" in start
+
+    if are_ora:
+        start_dt = datetime.fromisoformat(start["dateTime"])
+        ziua_saptamanii = start_dt.weekday()
+    else:
+        start_date = datetime.fromisoformat(start["date"]).date()
+        ziua_saptamanii = start_date.weekday()
+
+    if ziua_saptamanii == 4:  # Vineri
+        service.events().delete(calendarId=CALENDAR_ID, eventId=cod).execute()
+        return "sters"
+
+    # --- Altfel, mutam evenimentul cu o zi (maine) ---
+    if are_ora:
+        event["start"]["dateTime"] = (start_dt + timedelta(days=1)).isoformat()
+    else:
+        event["start"]["date"] = (start_date + timedelta(days=1)).isoformat()
+
+    if "dateTime" in end:
+        end_dt = datetime.fromisoformat(end["dateTime"])
+        event["end"]["dateTime"] = (end_dt + timedelta(days=1)).isoformat()
+    elif "date" in end:
+        end_date = datetime.fromisoformat(end["date"]).date()
+        event["end"]["date"] = (end_date + timedelta(days=1)).isoformat()
+
+    service.events().update(calendarId=CALENDAR_ID, eventId=cod, body=event).execute()
+    return "mutat"
+
+
 def trimite_email(destinatar, subiect, continut):
     """Trimite un email prin SMTP2GO API (HTTPS, port 443 - nu e blocat
     de host-uri gratuite, spre deosebire de SMTP)."""
@@ -108,6 +162,9 @@ def confirmare_client(cod, telefon):
         service = get_calendar_service()
         event = service.events().get(calendarId=CALENDAR_ID, eventId=cod).execute()
 
+        nume = extrage_nume_din_titlu(event)
+        ora = extrage_ora_eveniment(event)
+
         event["summary"] = sterge_trebuie_din_titlu(event)
 
         service.events().update(
@@ -123,8 +180,7 @@ def confirmare_client(cod, telefon):
     try:
         trimite_email(
             OWNER_EMAIL,
-            "Client nou confirmat - programare",
-            f"Un client a confirmat programarea (cod {cod}).\n\n"
+            f"{nume} a confirmat sedinta de {ora}",
             f"Apasa aici pentru a trimite confirmarea finala catre client pe WhatsApp:\n"
             f"{link_owner}"
         )
@@ -169,15 +225,23 @@ def reprogramare_client(cod, telefon):
         service = get_calendar_service()
         event = service.events().get(calendarId=CALENDAR_ID, eventId=cod).execute()
         nume = extrage_nume_din_titlu(event)
+
+        rezultat = verifica_si_actualizeaza_reprogramare(service, cod, event)
+
     except Exception as e:
-        return f"A aparut o eroare la citirea programarii din calendar: {e}", 500
+        return f"A aparut o eroare la actualizarea programarii in calendar: {e}", 500
+
+    if rezultat == "sters":
+        mesaj_actiune = "Programarea a fost stearsa"
+    else:
+        mesaj_actiune = "Programarea a fost mutata maine la aceeasi ora"
 
     try:
         trimite_email(
             OWNER_EMAIL,
             f"Reprogramare-{nume}",
-            f"Clientul {nume} (telefon {telefon}) a cerut reprogramarea "
-            f"programarii cu codul {cod}.\n\n"
+            f"{mesaj_actiune}\n\n"
+            f"Clientul {nume} (telefon {telefon}), cod programare {cod}.\n\n"
             f"Contacteaza-l pe WhatsApp cat mai curand posibil."
         )
     except Exception as e:
