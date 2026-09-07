@@ -123,10 +123,13 @@ def verifica_si_actualizeaza_reprogramare(service, cod, event):
         end_date = datetime.fromisoformat(end["date"]).date()
         event["end"]["date"] = (end_date + timedelta(days=1)).isoformat()
 
-    # --- Marcam evenimentul ca "deja reprogramat", ca sa detectam ---
-    # --- eventuale click-uri repetate pe acelasi link ---
+    # --- Marcam evenimentul cu data noua, ca sa detectam click-uri ---
+    # --- repetate ATATA TIMP CAT data ramane aceeasi. Daca data se ---
+    # --- schimba ulterior prin alta actiune, marcajul nu mai ---
+    # --- corespunde, iar link-ul devine din nou utilizabil. ---
+    data_noua = event["start"]["dateTime"] if are_ora else event["start"]["date"]
     event.setdefault("extendedProperties", {}).setdefault("private", {})
-    event["extendedProperties"]["private"]["reprogramat"] = "true"
+    event["extendedProperties"]["private"]["reprogramat_pentru"] = data_noua
 
     service.events().update(calendarId=CALENDAR_ID, eventId=cod, body=event).execute()
     return "mutat"
@@ -250,11 +253,15 @@ def reprogramare_client(cod, telefon):
     except Exception as e:
         return f"A aparut o eroare la citirea programarii din calendar: {e}", 500
 
-    deja_reprogramat = (
+    marcaj_data = (
         event.get("extendedProperties", {})
         .get("private", {})
-        .get("reprogramat") == "true"
+        .get("reprogramat_pentru")
     )
+
+    data_curenta = event.get("start", {}).get("dateTime") or event.get("start", {}).get("date")
+
+    deja_reprogramat = marcaj_data is not None and marcaj_data == data_curenta
 
     if deja_reprogramat:
         return "Sedinta a fost deja activata."
