@@ -177,7 +177,7 @@ def confirmare_client(cod, telefon):
     deja_confirmat = "trebuie" not in titlu_curent.lower()
 
     if deja_confirmat:
-        return "Sedinta a fost deja activata."
+        return "Sedinta a fost deja confirmata."
 
     # --- Pasul 1: actualizeaza evenimentul in Google Calendar ---
     try:
@@ -248,7 +248,7 @@ def reprogramare_client(cod, telefon):
         if e.resp.status == 404:
             # Evenimentul nu mai exista - a fost deja sters printr-o
             # activare anterioara a acestui link (ziua era vineri).
-            return "Sedinta a fost deja activata."
+            return "Sedinta a fost deja reprogramata."
         return f"A aparut o eroare la citirea programarii din calendar: {e}", 500
     except Exception as e:
         return f"A aparut o eroare la citirea programarii din calendar: {e}", 500
@@ -264,7 +264,7 @@ def reprogramare_client(cod, telefon):
     deja_reprogramat = marcaj_data is not None and marcaj_data == data_curenta
 
     if deja_reprogramat:
-        return "Sedinta a fost deja activata."
+        return "Sedinta a fost deja reprogramata."
 
     try:
         nume = extrage_nume_din_titlu(event)
