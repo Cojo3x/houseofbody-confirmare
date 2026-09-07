@@ -6,6 +6,7 @@ from urllib.parse import quote
 from flask import Flask, redirect
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 app = Flask(__name__)
 
@@ -122,6 +123,11 @@ def verifica_si_actualizeaza_reprogramare(service, cod, event):
         end_date = datetime.fromisoformat(end["date"]).date()
         event["end"]["date"] = (end_date + timedelta(days=1)).isoformat()
 
+    # --- Marcam evenimentul ca "deja reprogramat", ca sa detectam ---
+    # --- eventuale click-uri repetate pe acelasi link ---
+    event.setdefault("extendedProperties", {}).setdefault("private", {})
+    event["extendedProperties"]["private"]["reprogramat"] = "true"
+
     service.events().update(calendarId=CALENDAR_ID, eventId=cod, body=event).execute()
     return "mutat"
 
@@ -157,11 +163,21 @@ def trimite_email(destinatar, subiect, continut):
 @app.route('/<cod>/<telefon>')
 def confirmare_client(cod, telefon):
 
-    # --- Pasul 1: actualizeaza evenimentul in Google Calendar ---
+    # --- Pasul 0: verifica daca link-ul a fost deja activat ---
     try:
         service = get_calendar_service()
         event = service.events().get(calendarId=CALENDAR_ID, eventId=cod).execute()
+    except Exception as e:
+        return f"A aparut o eroare la citirea programarii din calendar: {e}", 500
 
+    titlu_curent = event.get("summary", "")
+    deja_confirmat = "trebuie" not in titlu_curent.lower()
+
+    if deja_confirmat:
+        return "Sedinta a fost deja activata."
+
+    # --- Pasul 1: actualizeaza evenimentul in Google Calendar ---
+    try:
         nume = extrage_nume_din_titlu(event)
         ora = extrage_ora_eveniment(event)
 
@@ -221,11 +237,30 @@ def confirmare_owner(cod, telefon):
 @app.route('/reprogramare/<cod>/<telefon>')
 def reprogramare_client(cod, telefon):
 
+    # --- Pasul 0: verifica daca link-ul a fost deja activat ---
     try:
         service = get_calendar_service()
         event = service.events().get(calendarId=CALENDAR_ID, eventId=cod).execute()
-        nume = extrage_nume_din_titlu(event)
+    except HttpError as e:
+        if e.resp.status == 404:
+            # Evenimentul nu mai exista - a fost deja sters printr-o
+            # activare anterioara a acestui link (ziua era vineri).
+            return "Sedinta a fost deja activata."
+        return f"A aparut o eroare la citirea programarii din calendar: {e}", 500
+    except Exception as e:
+        return f"A aparut o eroare la citirea programarii din calendar: {e}", 500
 
+    deja_reprogramat = (
+        event.get("extendedProperties", {})
+        .get("private", {})
+        .get("reprogramat") == "true"
+    )
+
+    if deja_reprogramat:
+        return "Sedinta a fost deja activata."
+
+    try:
+        nume = extrage_nume_din_titlu(event)
         rezultat = verifica_si_actualizeaza_reprogramare(service, cod, event)
 
     except Exception as e:
