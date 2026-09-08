@@ -3,7 +3,7 @@ import json
 import re
 import requests
 from urllib.parse import quote
-from flask import Flask, redirect
+from flask import Flask, redirect, render_template_string
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -26,39 +26,31 @@ BASE_URL = "https://houseofbody.ro"
 
 
 # ==================================================================
-# FUNCTIE UNITARĂ PENTRU GENERAREA CELOR 4 PAGINI (FĂRĂ CONFLICTE CSS)
+# ȘABLONUL VIZUAL CURAT (FĂRĂ REPETIȚII ȘI FĂRĂ CONFLICTE DE FORMAT)
 # ==================================================================
-def genereaza_pagina_status(clasa_buton, text_status):
-    """Genereaza HTML-ul curat pentru raspunsuri, evitand erorile de sintaxa."""
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Status Programare</title>
-        <style>
-            body {{ font-family: 'Segoe UI', sans-serif; background-color: #f4f6f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }}
-            .container {{ text-align: center; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 400px; width: 90%; }}
-            .status-btn {{ display: block; width: 100%; padding: 25px 20px; font-size: 18px; font-weight: bold; color: white; border: none; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); line-height: 1.5; box-sizing: border-box; }}
-            .btn-verde {{ background-color: #2ecc71; }}
-            .btn-rosu {{ background-color: #e74c3c; }}
-            .info-box {{ display: block; background-color: #7f8c8d; color: white; padding: 14px 20px; font-size: 15px; border-radius: 8px; font-weight: bold; width: 100%; box-sizing: border-box; line-height: 1.4; }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="status-btn {clasa_buton}">{text_status}</div>
-            <div class="info-box">Pentru a inchide fereasta apasa BACK pe telefon</div>
-        </div>
-    </body>
-    </html>
-    """
-
-# Salvarea celor 4 structuri finale în variabile globale utilizând funcția securizată
-PAGINA_DEJA_CONFIRMAT = genereaza_pagina_status("btn-verde", "Sedinta a fost deja confirmata.")
-PAGINA_CONFIRMARE_SUCCES = genereaza_pagina_status("btn-verde", "Multumim! Programarea ta a fost inregistrata ca si confirmata.")
-PAGINA_REPROGRAMARE_SUCCES = genereaza_pagina_status("btn-rosu", "Veti fi contactat pe WhatsApp cat mai curand posibil.")
-PAGINA_DEJA_REPROGRAMAT = genereaza_pagina_status("btn-rosu", "Sedinta a fost deja reprogramata.")
+_SABLON_HTML = """
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Status Programare</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { text-align: center; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 400px; width: 90%; }
+        .status-btn { display: block; width: 100%; padding: 25px 20px; font-size: 18px; font-weight: bold; color: white; border: none; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); line-height: 1.5; box-sizing: border-box; }
+        .btn-verde { background-color: #2ecc71; }
+        .btn-rosu { background-color: #e74c3c; }
+        .info-box { display: block; background-color: #7f8c8d; color: white; padding: 14px 20px; font-size: 15px; border-radius: 8px; font-weight: bold; width: 100%; box-sizing: border-box; line-height: 1.4; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="status-btn {{ clasa_buton }}">{{ text_status }}</div>
+        <div class="info-box">Pentru a inchide fereasta apasa BACK pe telefon</div>
+    </div>
+</body>
+</html>
+"""
 
 
 # ==================================================================
@@ -197,8 +189,9 @@ def confirmare_client(cod, telefon):
     titlu_curent = event.get("summary", "")
     deja_confirmat = "trebuie" not in titlu_curent.lower()
 
+    # 🟢 Randează corect prin motorul Flask ca scenă vizuală
     if deja_confirmat:
-        return PAGINA_DEJA_CONFIRMAT
+        return render_template_string(_SABLON_HTML, clasa_buton="btn-verde", text_status="Sedinta a fost deja confirmata.")
 
     try:
         nume = extrage_nume_din_titlu(event)
@@ -228,7 +221,8 @@ def confirmare_client(cod, telefon):
             f"email a esuat: {e}"
         ), 500
 
-    return PAGINA_CONFIRMARE_SUCCES
+    # 🟢 Randează corect prin motorul Flask ca scenă vizuală
+    return render_template_string(_SABLON_HTML, clasa_buton="btn-verde", text_status="Multumim! Programarea ta a fost inregistrata ca si confirmata.")
 
 
 # ==================================================================
@@ -257,4 +251,13 @@ def reprogramare_client(cod, telefon):
         event = service.events().get(calendarId=CALENDAR_ID, eventId=cod).execute()
     except HttpError as e:
         if e.resp.status == 404:
-            return PAGINA_DEJA_REPROGRAMAT
+            # 🔴 Randează corect prin motorul Flask ca scenă vizuală
+            return render_template_string(_SABLON_HTML, clasa_buton="btn-rosu", text_status="Sedinta a fost deja reprogramata.")
+        return f"A aparut o eroare la citirea programarii din calendar: {e}", 500
+    except Exception as e:
+        return f"A aparut o eroare la citirea programarii din calendar: {e}", 500
+
+    marcaj_data = (
+        event.get("extendedProperties", {})
+        .get("private", {})
+        .get("reprogramat_pentru")
