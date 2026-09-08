@@ -26,83 +26,104 @@ BASE_URL = "https://houseofbody.ro"
 
 
 # ==================================================================
-# ȘABLONUL VIZUAL BASE PENTRU PAGINI
+# ȘABLONUL VIZUAL ȘI SALVAREA CELOR 4 PAGINI ÎN VARIABILE
 # ==================================================================
-def genereaza_pagina_status(clasa_buton, text_status):
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Status Programare</title>
-        <style>
-            body {{
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background-color: #f4f6f9;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                height: 100vh;
-                margin: 0;
-            }}
-            .container {{
-                text-align: center;
-                background: white;
-                padding: 30px;
-                border-radius: 16px;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-                max-width: 400px;
-                width: 90%;
-            }}
-            .status-btn {{
-                display: block;
-                width: 100%;
-                padding: 25px 20px;
-                font-size: 18px;
-                font-weight: bold;
-                color: white;
-                border: none;
-                border-radius: 12px;
-                margin-bottom: 25px;
-                box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-                text-decoration: none;
-                line-height: 1.5;
-                cursor: default;
-                box-sizing: border-box;
-            }}
-            .btn-verde {{ background-color: #2ecc71; }}
-            .btn-rosu {{ background-color: #e74c3c; }}
-            
-            .info-box {{
-                display: block;
-                background-color: #7f8c8d;
-                color: white;
-                padding: 14px 20px;
-                font-size: 15px;
-                border-radius: 8px;
-                font-weight: bold;
-                width: 100%;
-                box-sizing: border-box;
-                line-height: 1.4;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="status-btn {clasa_buton}">
-                {text_status}
-            </div>
-            <div class="info-box">
-                Pentru a inchide fereasta apasa BACK pe telefon
-            </div>
+
+_SABLON_HTML = """
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Status Programare</title>
+    <style>
+        body {{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }}
+        .container {{
+            text-align: center;
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 400px;
+            width: 90%;
+        }}
+        .status-btn {{
+            display: block;
+            width: 100%;
+            padding: 25px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            text-decoration: none;
+            line-height: 1.5;
+            cursor: default;
+            box-sizing: border-box;
+        }}
+        .btn-verde {{ background-color: #2ecc71; }}
+        .btn-rosu {{ background-color: #e74c3c; }}
+        
+        .info-box {{
+            display: block;
+            background-color: #7f8c8d;
+            color: white;
+            padding: 14px 20px;
+            font-size: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            width: 100%;
+            box-sizing: border-box;
+            line-height: 1.4;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="status-btn {clasa_buton}">
+            {text_status}
         </div>
-    </body>
-    </html>
-    """
+        <div class="info-box">
+            Pentru a inchide fereasta apasa BACK pe telefon
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+# Cele 4 pagini salvate curat în variabile globale dedesubt
+PAGINA_DEJA_CONFIRMAT = _SABLON_HTML.format(
+    clasa_buton="btn-verde", 
+    text_status="Sedinta a fost deja confirmata."
+)
+
+PAGINA_CONFIRMARE_SUCCES = _SABLON_HTML.format(
+    clasa_buton="btn-verde", 
+    text_status="Multumim! Programarea ta a fost inregistrata ca si confirmata."
+)
+
+PAGINA_REPROGRAMARE_SUCCES = _SABLON_HTML.format(
+    clasa_buton="btn-rosu", 
+    text_status="Veti fi contactat pe WhatsApp cat mai curand posibil."
+)
+
+PAGINA_DEJA_REPROGRAMAT = _SABLON_HTML.format(
+    clasa_buton="btn-rosu", 
+    text_status="Sedinta a fost deja reprogramata."
+)
 
 
 # ==================================================================
-# RUTA HOME
+# RUTA HOME: pagina goala (fara cod si telefon in link)
 # ==================================================================
 
 @app.route('/')
@@ -209,7 +230,7 @@ def trimite_email(destinatar, subiect, continut):
     payload = {
         "sender": SENDER_EMAIL,
         "to": [destinatar],
-        "subject": subiect,
+        "subject": subject,
         "text_body": continut
     }
     response = requests.post(url, headers=headers, json=payload, timeout=15)
@@ -236,9 +257,8 @@ def confirmare_client(cod, telefon):
     titlu_curent = event.get("summary", "")
     deja_confirmat = "trebuie" not in titlu_curent.lower()
 
-    # 🟢 PAGINA 1: Deja confirmată (Buton Verde)
     if deja_confirmat:
-        return render_template_string(genereaza_pagina_status("btn-verde", "Sedinta a fost deja confirmata."))
+        return PAGINA_DEJA_CONFIRMAT
 
     try:
         nume = extrage_nume_din_titlu(event)
@@ -268,8 +288,7 @@ def confirmare_client(cod, telefon):
             f"email a esuat: {e}"
         ), 500
 
-    # 🟢 PAGINA 2: Înregistrare cu succes (Buton Verde)
-    return render_template_string(genereaza_pagina_status("btn-verde", "Multumim! Programarea ta a fost inregistrata ca si confirmata."))
+    return PAGINA_CONFIRMARE_SUCCES
 
 
 # ==================================================================
@@ -288,6 +307,3 @@ def confirmare_owner(cod, telefon):
 
 # ==================================================================
 # RUTA 3: Clientul cere reprogramare
-# ==================================================================
-
-@app.route('/reprogramare/<cod>/<telefon>')
