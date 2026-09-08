@@ -26,100 +26,39 @@ BASE_URL = "https://houseofbody.ro"
 
 
 # ==================================================================
-# CELE 4 PAGINI SALVATE ÎN VARIABILE CU GREEN/RED ȘI TEXTUL GRI
+# FUNCTIE UNITARĂ PENTRU GENERAREA CELOR 4 PAGINI (FĂRĂ CONFLICTE CSS)
 # ==================================================================
+def genereaza_pagina_status(clasa_buton, text_status):
+    """Genereaza HTML-ul curat pentru raspunsuri, evitand erorile de sintaxa."""
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Status Programare</title>
+        <style>
+            body {{ font-family: 'Segoe UI', sans-serif; background-color: #f4f6f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }}
+            .container {{ text-align: center; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 400px; width: 90%; }}
+            .status-btn {{ display: block; width: 100%; padding: 25px 20px; font-size: 18px; font-weight: bold; color: white; border: none; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); line-height: 1.5; box-sizing: border-box; }}
+            .btn-verde {{ background-color: #2ecc71; }}
+            .btn-rosu {{ background-color: #e74c3c; }}
+            .info-box {{ display: block; background-color: #7f8c8d; color: white; padding: 14px 20px; font-size: 15px; border-radius: 8px; font-weight: bold; width: 100%; box-sizing: border-box; line-height: 1.4; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="status-btn {clasa_buton}">{text_status}</div>
+            <div class="info-box">Pentru a inchide fereasta apasa BACK pe telefon</div>
+        </div>
+    </body>
+    </html>
+    """
 
-# 🟢 PAGINA 1: Deja confirmată (Buton Verde)
-PAGINA_DEJA_CONFIRMAT = """
-<!DOCTYPE html>
-<html>
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Status Programare</title>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .container { text-align: center; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 400px; width: 90%; }
-        .status-btn { display: block; width: 100%; padding: 25px 20px; font-size: 18px; font-weight: bold; color: white; border: none; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); line-height: 1.5; background-color: #2ecc71; box-sizing: border-box; }
-        .info-box { display: block; background-color: #7f8c8d; color: white; padding: 14px 20px; font-size: 15px; border-radius: 8px; font-weight: bold; width: 100%; box-sizing: border-box; line-height: 1.4; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="status-btn">Sedinta a fost deja confirmata.</div>
-        <div class="info-box">Pentru a inchide fereasta apasa BACK pe telefon</div>
-    </div>
-</body>
-</html>
-"""
-
-# 🟢 PAGINA 2: Înregistrare cu succes (Buton Verde)
-PAGINA_CONFIRMARE_SUCCES = """
-<!DOCTYPE html>
-<html>
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Status Programare</title>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .container { text-align: center; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 400px; width: 90%; }
-        .status-btn { display: block; width: 100%; padding: 25px 20px; font-size: 18px; font-weight: bold; color: white; border: none; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); line-height: 1.5; background-color: #2ecc71; box-sizing: border-box; }
-        .info-box { display: block; background-color: #7f8c8d; color: white; padding: 14px 20px; font-size: 15px; border-radius: 8px; font-weight: bold; width: 100%; box-sizing: border-box; line-height: 1.4; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="status-btn">Multumim! Programarea ta a fost inregistrata ca si confirmata.</div>
-        <div class="info-box">Pentru a inchide fereasta apasa BACK pe telefon</div>
-    </div>
-</body>
-</html>
-"""
-
-# 🔴 PAGINA 3: Cerere de reprogramare trimisă (Buton Roșu)
-PAGINA_REPROGRAMARE_SUCCES = """
-<!DOCTYPE html>
-<html>
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Status Programare</title>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .container { text-align: center; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 400px; width: 90%; }
-        .status-btn { display: block; width: 100%; padding: 25px 20px; font-size: 18px; font-weight: bold; color: white; border: none; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); line-height: 1.5; background-color: #e74c3c; box-sizing: border-box; }
-        .info-box { display: block; background-color: #7f8c8d; color: white; padding: 14px 20px; font-size: 15px; border-radius: 8px; font-weight: bold; width: 100%; box-sizing: border-box; line-height: 1.4; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="status-btn">Veti fi contactat pe WhatsApp cat mai curand posibil.</div>
-        <div class="info-box">Pentru a inchide fereasta apasa BACK pe telefon</div>
-    </div>
-</body>
-</html>
-"""
-
-# 🔴 PAGINA 4: Deja reprogramată (Buton Roșu)
-PAGINA_DEJA_REPROGRAMAT = """
-<!DOCTYPE html>
-<html>
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Status Programare</title>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .container { text-align: center; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 400px; width: 90%; }
-        .status-btn { display: block; width: 100%; padding: 25px 20px; font-size: 18px; font-weight: bold; color: white; border: none; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); line-height: 1.5; background-color: #e74c3c; box-sizing: border-box; }
-        .info-box { display: block; background-color: #7f8c8d; color: white; padding: 14px 20px; font-size: 15px; border-radius: 8px; font-weight: bold; width: 100%; box-sizing: border-box; line-height: 1.4; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="status-btn">Sedinta a fost deja reprogramata.</div>
-        <div class="info-box">Pentru a inchide fereasta apasa BACK pe telefon</div>
-    </div>
-</body>
-</html>
-"""
+# Salvarea celor 4 structuri finale în variabile globale utilizând funcția securizată
+PAGINA_DEJA_CONFIRMAT = genereaza_pagina_status("btn-verde", "Sedinta a fost deja confirmata.")
+PAGINA_CONFIRMARE_SUCCES = genereaza_pagina_status("btn-verde", "Multumim! Programarea ta a fost inregistrata ca si confirmata.")
+PAGINA_REPROGRAMARE_SUCCES = genereaza_pagina_status("btn-rosu", "Veti fi contactat pe WhatsApp cat mai curand posibil.")
+PAGINA_DEJA_REPROGRAMAT = genereaza_pagina_status("btn-rosu", "Sedinta a fost deja reprogramata.")
 
 
 # ==================================================================
@@ -224,3 +163,98 @@ def trimite_email(destinatar, subiect, continut):
     """Trimite un email prin SMTP2GO API."""
     url = "https://smtp2go.com"
     headers = {
+        "Content-Type": "application/json",
+        "X-Smtp2go-Api-Key": SMTP2GO_API_KEY,
+        "Accept": "application/json"
+    }
+    payload = {
+        "sender": SENDER_EMAIL,
+        "to": [destinatar],
+        "subject": subiect,
+        "text_body": continut
+    }
+    response = requests.post(url, headers=headers, json=payload, timeout=15)
+    data = response.json() if response.headers.get("Content-Type", "").startswith("application/json") else {}
+    esuat = data.get("data", {}).get("failed", 0)
+
+    if response.status_code >= 300 or esuat:
+        raise Exception(f"SMTP2GO a raspuns cu eroare: {response.text}")
+
+
+# ==================================================================
+# RUTA 1: Clientul confirma programarea
+# ==================================================================
+
+@app.route('/<cod>/<telefon>')
+def confirmare_client(cod, telefon):
+
+    try:
+        service = get_calendar_service()
+        event = service.events().get(calendarId=CALENDAR_ID, eventId=cod).execute()
+    except Exception as e:
+        return f"A aparut o eroare la citirea programarii din calendar: {e}", 500
+
+    titlu_curent = event.get("summary", "")
+    deja_confirmat = "trebuie" not in titlu_curent.lower()
+
+    if deja_confirmat:
+        return PAGINA_DEJA_CONFIRMAT
+
+    try:
+        nume = extrage_nume_din_titlu(event)
+        ora = extrage_ora_eveniment(event)
+
+        event["summary"] = sterge_trebuie_din_titlu(event)
+
+        service.events().update(
+            calendarId=CALENDAR_ID, eventId=cod, body=event
+        ).execute()
+
+    except Exception as e:
+        return f"A aparut o eroare la actualizarea programarii in calendar: {e}", 500
+
+    link_owner = f"{BASE_URL}/owner/{cod}/{telefon}"
+
+    try:
+        trimite_email(
+            OWNER_EMAIL,
+            f"{nume} a confirmat sedinta de {ora}",
+            f"Apasa aici pentru a trimite confirmarea finala catre client pe WhatsApp:\n"
+            f"{link_owner}"
+        )
+    except Exception as e:
+        return (
+            "Programarea a fost inregistrata in calendar, dar notificarea prin "
+            f"email a esuat: {e}"
+        ), 500
+
+    return PAGINA_CONFIRMARE_SUCCES
+
+
+# ==================================================================
+# RUTA 2: Tu confirmi programarea (Redirecționare automată)
+# ==================================================================
+
+@app.route('/owner/<cod>/<telefon>')
+def confirmare_owner(cod, telefon):
+    mesaj = (
+        "Buna! Programarea dumneavoastra a fost confirmata de echipa noastra. "
+        "Va asteptam!"
+    )
+    link_whatsapp = f"https://wa.me{telefon}?text={quote(mesaj)}"
+    return redirect(link_whatsapp)
+
+
+# ==================================================================
+# RUTA 3: Clientul cere reprogramare
+# ==================================================================
+
+@app.route('/reprogramare/<cod>/<telefon>')
+def reprogramare_client(cod, telefon):
+
+    try:
+        service = get_calendar_service()
+        event = service.events().get(calendarId=CALENDAR_ID, eventId=cod).execute()
+    except HttpError as e:
+        if e.resp.status == 404:
+            return PAGINA_DEJA_REPROGRAMAT
