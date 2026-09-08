@@ -22,7 +22,7 @@ SMTP2GO_API_KEY = os.environ.get("SMTP2GO_API_KEY")
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL")
 OWNER_EMAIL = os.environ.get("OWNER_EMAIL")
 
-BASE_URL = "https://confirmare.houseofbody.ro"
+BASE_URL = "https://houseofbody.ro"
 
 
 # ==================================================================
@@ -143,7 +143,7 @@ def get_calendar_service():
     creds_dict = json.loads(GOOGLE_CREDENTIALS_JSON)
     credentials = service_account.Credentials.from_service_account_info(
         creds_dict,
-        scopes=["https://www.googleapis.com/auth/calendar"]
+        scopes=["https://googleapis.com"]
     )
     return build("calendar", "v3", credentials=credentials)
 
@@ -222,5 +222,5 @@ def verifica_si_actualizeaza_reprogramare(service, cod, event):
 
 def trimite_email(destinatar, subiect, continut):
     """Trimite un email prin SMTP2GO API."""
-    url = "https://api.smtp2go.com/v3/email/send"
+    url = "https://smtp2go.com"
     headers = {
