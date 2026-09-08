@@ -1,0 +1,296 @@
+import os
+import json
+import re
+import requests
+from urllib.parse import quote
+from flask import Flask, redirect
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+
+app = Flask(__name__)
+
+# ==================================================================
+# CONFIGURARE - toate valorile astea vin din variabile de mediu
+# setate in Render (Environment tab), NU sunt scrise direct in cod.
+# ==================================================================
+
+GOOGLE_CREDENTIALS_JSON = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+CALENDAR_ID = os.environ.get("CALENDAR_ID", "primary")
+
+SMTP2GO_API_KEY = os.environ.get("SMTP2GO_API_KEY")
+SENDER_EMAIL = os.environ.get("SENDER_EMAIL")
+OWNER_EMAIL = os.environ.get("OWNER_EMAIL")
+
+BASE_URL = "https://confirmare.houseofbody.ro"
+
+
+# ==================================================================
+# RUTA HOME: pagina goala (fara cod si telefon in link)
+# ==================================================================
+
+@app.route('/')
+def home():
+    return (
+        "Acest link nu este complet. Foloseste link-ul primit prin "
+        "WhatsApp sau email, care contine un cod de confirmare."
+    )
+
+
+# ==================================================================
+# FUNCTII AJUTATOARE
+# ==================================================================
+
+def get_calendar_service():
+    """Creeaza o conexiune autentificata catre Google Calendar API."""
+    creds_dict = json.loads(GOOGLE_CREDENTIALS_JSON)
+    credentials = service_account.Credentials.from_service_account_info(
+        creds_dict,
+        scopes=["https://www.googleapis.com/auth/calendar"]
+    )
+    return build("calendar", "v3", credentials=credentials)
+
+
+def sterge_trebuie_din_titlu(event):
+    """Elimina cuvantul 'Trebuie' (si spatiul de dupa el, daca exista)
+    din titlul evenimentului, indiferent de majuscule/minuscule
+    (Trebuie, trebuie, TREBUIE etc.), curatand si eventualele spatii
+    duble sau liniute ramase in urma stergerii."""
+    titlu_vechi = event.get("summary", "")
+    titlu_nou = re.sub(r"trebuie\s?", "", titlu_vechi, flags=re.IGNORECASE)
+    titlu_nou = re.sub(r"\s{2,}", " ", titlu_nou)  # curata spatii duble ramase
+    titlu_nou = titlu_nou.strip()
+    titlu_nou = titlu_nou.lstrip("-").strip()
+    return titlu_nou
+
+
+def extrage_nume_din_titlu(event):
+    """Extrage numele clientului din primele doua cuvinte ale
+    titlului evenimentului (ex: 'Ion Popescu - Trebuie confirmat'
+    -> 'Ion Popescu')."""
+    titlu = event.get("summary", "")
+    cuvinte = titlu.split()
+    return " ".join(cuvinte[:2]) if cuvinte else "client"
+
+
+def extrage_ora_eveniment(event):
+    """Extrage ora de inceput a evenimentului, in format HH:MM."""
+    from datetime import datetime
+
+    start = event.get("start", {})
+    data_ora = start.get("dateTime")
+
+    if not data_ora:
+        return "(toata ziua)"
+
+    dt = datetime.fromisoformat(data_ora)
+    return dt.strftime("%H:%M")
+
+
+def verifica_si_actualizeaza_reprogramare(service, cod, event):
+    """Verifica ziua evenimentului:
+    - daca e VINERI (weekday 4), sterge evenimentul din calendar
+    - altfel, muta evenimentul cu o zi (maine), pastrand aceeasi ora
+    Returneaza 'sters' sau 'mutat'."""
+    from datetime import datetime, timedelta
+
+    start = event.get("start", {})
+    end = event.get("end", {})
+
+    are_ora = "dateTime" in start
+
+    if are_ora:
+        start_dt = datetime.fromisoformat(start["dateTime"])
+        ziua_saptamanii = start_dt.weekday()
+    else:
+        start_date = datetime.fromisoformat(start["date"]).date()
+        ziua_saptamanii = start_date.weekday()
+
+    if ziua_saptamanii == 4:  # Vineri
+        service.events().delete(calendarId=CALENDAR_ID, eventId=cod).execute()
+        return "sters"
+
+    # --- Altfel, mutam evenimentul cu o zi (maine) ---
+    if are_ora:
+        event["start"]["dateTime"] = (start_dt + timedelta(days=1)).isoformat()
+    else:
+        event["start"]["date"] = (start_date + timedelta(days=1)).isoformat()
+
+    if "dateTime" in end:
+        end_dt = datetime.fromisoformat(end["dateTime"])
+        event["end"]["dateTime"] = (end_dt + timedelta(days=1)).isoformat()
+    elif "date" in end:
+        end_date = datetime.fromisoformat(end["date"]).date()
+        event["end"]["date"] = (end_date + timedelta(days=1)).isoformat()
+
+    # --- Marcam evenimentul cu data noua, ca sa detectam click-uri ---
+    # --- repetate ATATA TIMP CAT data ramane aceeasi. Daca data se ---
+    # --- schimba ulterior prin alta actiune, marcajul nu mai ---
+    # --- corespunde, iar link-ul devine din nou utilizabil. ---
+    data_noua = event["start"]["dateTime"] if are_ora else event["start"]["date"]
+    event.setdefault("extendedProperties", {}).setdefault("private", {})
+    event["extendedProperties"]["private"]["reprogramat_pentru"] = data_noua
+
+    service.events().update(calendarId=CALENDAR_ID, eventId=cod, body=event).execute()
+    return "mutat"
+
+
+def trimite_email(destinatar, subiect, continut):
+    """Trimite un email prin SMTP2GO API (HTTPS, port 443 - nu e blocat
+    de host-uri gratuite, spre deosebire de SMTP)."""
+    url = "https://api.smtp2go.com/v3/email/send"
+    headers = {
+        "Content-Type": "application/json",
+        "X-Smtp2go-Api-Key": SMTP2GO_API_KEY,
+        "Accept": "application/json"
+    }
+    payload = {
+        "sender": SENDER_EMAIL,
+        "to": [destinatar],
+        "subject": subiect,
+        "text_body": continut
+    }
+    response = requests.post(url, headers=headers, json=payload, timeout=15)
+    data = response.json() if response.headers.get("Content-Type", "").startswith("application/json") else {}
+    esuat = data.get("data", {}).get("failed", 0)
+
+    if response.status_code >= 300 or esuat:
+        raise Exception(f"SMTP2GO a raspuns cu eroare: {response.text}")
+
+
+# ==================================================================
+# RUTA 1: Clientul confirma programarea
+# Link primit prin WhatsApp: confirmare.houseofbody.ro/<cod>/<telefon>
+# ==================================================================
+
+@app.route('/<cod>/<telefon>')
+def confirmare_client(cod, telefon):
+
+    # --- Pasul 0: verifica daca link-ul a fost deja activat ---
+    try:
+        service = get_calendar_service()
+        event = service.events().get(calendarId=CALENDAR_ID, eventId=cod).execute()
+    except Exception as e:
+        return f"A aparut o eroare la citirea programarii din calendar: {e}", 500
+
+    titlu_curent = event.get("summary", "")
+    deja_confirmat = "trebuie" not in titlu_curent.lower()
+
+    if deja_confirmat:
+        return "Sedinta a fost deja confirmata."
+
+    # --- Pasul 1: actualizeaza evenimentul in Google Calendar ---
+    try:
+        nume = extrage_nume_din_titlu(event)
+        ora = extrage_ora_eveniment(event)
+
+        event["summary"] = sterge_trebuie_din_titlu(event)
+
+        service.events().update(
+            calendarId=CALENDAR_ID, eventId=cod, body=event
+        ).execute()
+
+    except Exception as e:
+        return f"A aparut o eroare la actualizarea programarii in calendar: {e}", 500
+
+    # --- Pasul 2: trimite-ti un EMAIL automat cu link de confirmare finala ---
+    link_owner = f"{BASE_URL}/owner/{cod}/{telefon}"
+
+    try:
+        trimite_email(
+            OWNER_EMAIL,
+            f"{nume} a confirmat sedinta de {ora}",
+            f"Apasa aici pentru a trimite confirmarea finala catre client pe WhatsApp:\n"
+            f"{link_owner}"
+        )
+    except Exception as e:
+        return (
+            "Programarea a fost inregistrata in calendar, dar notificarea prin "
+            f"email a esuat: {e}"
+        ), 500
+
+    return "Multumim! Programarea ta a fost inregistrata ca si confirmata."
+
+
+# ==================================================================
+# RUTA 2: Tu confirmi programarea (dupa ce ai primit email-ul)
+# Link primit prin email: confirmare.houseofbody.ro/owner/<cod>/<telefon>
+# La accesare, redirectioneaza automat catre WhatsApp cu mesajul gata scris.
+# ==================================================================
+
+@app.route('/owner/<cod>/<telefon>')
+def confirmare_owner(cod, telefon):
+
+    mesaj = (
+        "Buna! Programarea dumneavoastra a fost confirmata de echipa noastra. "
+        "Va asteptam!"
+    )
+
+    link_whatsapp = f"https://wa.me/{telefon}?text={quote(mesaj)}"
+    return redirect(link_whatsapp)
+
+
+# ==================================================================
+# RUTA 3: Clientul cere reprogramare (nu poate veni)
+# Link primit prin WhatsApp: confirmare.houseofbody.ro/reprogramare/<cod>/<telefon>
+# Numele clientului e preluat automat din Google Calendar (primele
+# doua cuvinte din titlul evenimentului), nu din link.
+# ==================================================================
+
+@app.route('/reprogramare/<cod>/<telefon>')
+def reprogramare_client(cod, telefon):
+
+    # --- Pasul 0: verifica daca link-ul a fost deja activat ---
+    try:
+        service = get_calendar_service()
+        event = service.events().get(calendarId=CALENDAR_ID, eventId=cod).execute()
+    except HttpError as e:
+        if e.resp.status == 404:
+            # Evenimentul nu mai exista - a fost deja sters printr-o
+            # activare anterioara a acestui link (ziua era vineri).
+            return "Sedinta a fost deja reprogramata."
+        return f"A aparut o eroare la citirea programarii din calendar: {e}", 500
+    except Exception as e:
+        return f"A aparut o eroare la citirea programarii din calendar: {e}", 500
+
+    marcaj_data = (
+        event.get("extendedProperties", {})
+        .get("private", {})
+        .get("reprogramat_pentru")
+    )
+
+    data_curenta = event.get("start", {}).get("dateTime") or event.get("start", {}).get("date")
+
+    deja_reprogramat = marcaj_data is not None and marcaj_data == data_curenta
+
+    if deja_reprogramat:
+        return "Sedinta a fost deja reprogramata."
+
+    try:
+        nume = extrage_nume_din_titlu(event)
+        rezultat = verifica_si_actualizeaza_reprogramare(service, cod, event)
+
+    except Exception as e:
+        return f"A aparut o eroare la actualizarea programarii in calendar: {e}", 500
+
+    if rezultat == "sters":
+        mesaj_actiune = "Programarea a fost stearsa"
+    else:
+        mesaj_actiune = "Programarea a fost mutata maine la aceeasi ora"
+
+    try:
+        trimite_email(
+            OWNER_EMAIL,
+            f"Reprogramare-{nume}",
+            f"{mesaj_actiune}\n\n"
+            f"Clientul {nume} (telefon {telefon}), cod programare {cod}.\n\n"
+            f"Contacteaza-l pe WhatsApp cat mai curand posibil."
+        )
+    except Exception as e:
+        return f"A aparut o eroare la trimiterea notificarii: {e}", 500
+
+    return "Veti fi contactat pe WhatsApp cat mai curand posibil."
+
+
+if __name__ == '__main__':
+    app.run()
