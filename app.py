@@ -257,7 +257,6 @@ def confirmare_client(cod, telefon):
     titlu_curent = event.get("summary", "")
     deja_confirmat = "trebuie" not in titlu_curent.lower()
 
-    # 🟢 Returnează variabila pentru Pagina 1
     if deja_confirmat:
         return PAGINA_DEJA_CONFIRMAT
 
@@ -289,7 +288,6 @@ def confirmare_client(cod, telefon):
             f"email a esuat: {e}"
         ), 500
 
-    # 🟢 Returnează variabila pentru Pagina 2
     return PAGINA_CONFIRMARE_SUCCES
 
 
@@ -307,3 +305,5 @@ def confirmare_owner(cod, telefon):
     return redirect(link_whatsapp)
 
 
+# ==================================================================
+# RUTA 3: Clientul cere reprogramare
