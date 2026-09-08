@@ -26,7 +26,7 @@ BASE_URL = "https://houseofbody.ro"
 
 
 # ==================================================================
-# ȘABLONUL VIZUAL CURAT (FĂRĂ REPETIȚII ȘI FĂRĂ CONFLICTE DE FORMAT)
+# ȘABLONUL VIZUAL PENTRU TOATE CELE 4 PAGINI
 # ==================================================================
 _SABLON_HTML = """
 <!DOCTYPE html>
@@ -189,7 +189,6 @@ def confirmare_client(cod, telefon):
     titlu_curent = event.get("summary", "")
     deja_confirmat = "trebuie" not in titlu_curent.lower()
 
-    # 🟢 Randează corect prin motorul Flask ca scenă vizuală
     if deja_confirmat:
         return render_template_string(_SABLON_HTML, clasa_buton="btn-verde", text_status="Sedinta a fost deja confirmata.")
 
@@ -221,7 +220,6 @@ def confirmare_client(cod, telefon):
             f"email a esuat: {e}"
         ), 500
 
-    # 🟢 Randează corect prin motorul Flask ca scenă vizuală
     return render_template_string(_SABLON_HTML, clasa_buton="btn-verde", text_status="Multumim! Programarea ta a fost inregistrata ca si confirmata.")
 
 
@@ -251,7 +249,6 @@ def reprogramare_client(cod, telefon):
         event = service.events().get(calendarId=CALENDAR_ID, eventId=cod).execute()
     except HttpError as e:
         if e.resp.status == 404:
-            # 🔴 Randează corect prin motorul Flask ca scenă vizuală
             return render_template_string(_SABLON_HTML, clasa_buton="btn-rosu", text_status="Sedinta a fost deja reprogramata.")
         return f"A aparut o eroare la citirea programarii din calendar: {e}", 500
     except Exception as e:
@@ -261,3 +258,10 @@ def reprogramare_client(cod, telefon):
         event.get("extendedProperties", {})
         .get("private", {})
         .get("reprogramat_pentru")
+    )
+
+    data_curenta = event.get("start", {}).get("dateTime") or event.get("start", {}).get("date")
+
+    deja_reprogramat = marcaj_data is not None and marcaj_data == data_curenta
+
+    if deja_reprogramat:
