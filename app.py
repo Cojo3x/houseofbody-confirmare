@@ -22,7 +22,7 @@ SMTP2GO_API_KEY = os.environ.get("SMTP2GO_API_KEY")
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL")
 OWNER_EMAIL = os.environ.get("OWNER_EMAIL")
 
-BASE_URL = "https://houseofbody.ro"
+BASE_URL = "https://confirmare.houseofbody.ro"
 
 
 # ==================================================================
@@ -72,7 +72,7 @@ _SABLON_HTML = """
         }}
         .btn-verde {{ background-color: #2ecc71; }}
         .btn-rosu {{ background-color: #e74c3c; }}
-        
+
         .info-box {{
             display: block;
             background-color: #7f8c8d;
@@ -102,22 +102,22 @@ _SABLON_HTML = """
 
 # Cele 4 pagini salvate curat în variabile globale dedesubt
 PAGINA_DEJA_CONFIRMAT = _SABLON_HTML.format(
-    clasa_buton="btn-verde", 
+    clasa_buton="btn-verde",
     text_status="Sedinta a fost deja confirmata."
 )
 
 PAGINA_CONFIRMARE_SUCCES = _SABLON_HTML.format(
-    clasa_buton="btn-verde", 
+    clasa_buton="btn-verde",
     text_status="Multumim! Programarea ta a fost inregistrata ca si confirmata."
 )
 
 PAGINA_REPROGRAMARE_SUCCES = _SABLON_HTML.format(
-    clasa_buton="btn-rosu", 
+    clasa_buton="btn-rosu",
     text_status="Veti fi contactat pe WhatsApp cat mai curand posibil."
 )
 
 PAGINA_DEJA_REPROGRAMAT = _SABLON_HTML.format(
-    clasa_buton="btn-rosu", 
+    clasa_buton="btn-rosu",
     text_status="Sedinta a fost deja reprogramata."
 )
 
@@ -143,7 +143,7 @@ def get_calendar_service():
     creds_dict = json.loads(GOOGLE_CREDENTIALS_JSON)
     credentials = service_account.Credentials.from_service_account_info(
         creds_dict,
-        scopes=["https://googleapis.com"]
+        scopes=["https://www.googleapis.com/auth/calendar"]
     )
     return build("calendar", "v3", credentials=credentials)
 
@@ -221,7 +221,7 @@ def verifica_si_actualizeaza_reprogramare(service, cod, event):
 
 def trimite_email(destinatar, subiect, continut):
     """Trimite un email prin SMTP2GO API."""
-    url = "https://smtp2go.com"
+    url = "https://api.smtp2go.com/v3/email/send"
     headers = {
         "Content-Type": "application/json",
         "X-Smtp2go-Api-Key": SMTP2GO_API_KEY,
@@ -301,9 +301,41 @@ def confirmare_owner(cod, telefon):
         "Buna! Programarea dumneavoastra a fost confirmata de echipa noastra. "
         "Va asteptam!"
     )
-    link_whatsapp = f"https://wa.me{telefon}?text={quote(mesaj)}"
+    link_whatsapp = f"https://wa.me/{telefon}?text={quote(mesaj)}"
     return redirect(link_whatsapp)
 
 
 # ==================================================================
 # RUTA 3: Clientul cere reprogramare
+# Link primit prin WhatsApp: confirmare.houseofbody.ro/reprogramare/<cod>/<telefon>
+# ==================================================================
+
+@app.route('/reprogramare/<cod>/<telefon>')
+def reprogramare_client(cod, telefon):
+
+    try:
+        service = get_calendar_service()
+        event = service.events().get(calendarId=CALENDAR_ID, eventId=cod).execute()
+    except Exception as e:
+        return f"A aparut o eroare la citirea programarii din calendar: {e}", 500
+
+    deja_reprogramat = (
+        event.get("extendedProperties", {})
+        .get("private", {})
+        .get("reprogramat_pentru")
+        is not None
+    )
+
+    if deja_reprogramat:
+        return PAGINA_DEJA_REPROGRAMAT
+
+    try:
+        verifica_si_actualizeaza_reprogramare(service, cod, event)
+    except Exception as e:
+        return f"A aparut o eroare la reprogramarea sedintei: {e}", 500
+
+    return PAGINA_REPROGRAMARE_SUCCES
+
+
+if __name__ == '__main__':
+    app.run()
