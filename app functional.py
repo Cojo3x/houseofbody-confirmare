@@ -289,7 +289,7 @@ def reprogramare_client(cod, telefon):
     except Exception as e:
         return f"A aparut o eroare la trimiterea notificarii: {e}", 500
 
-    return "Veti fi contactat pe WhatsApp cat mai curand posibil."
+    return "Sedinta Reprogramata. Veti fi contactat pe WhatsApp cat mai curand posibil."
 
 
 if __name__ == '__main__':
