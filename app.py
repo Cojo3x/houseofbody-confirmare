@@ -125,6 +125,9 @@ PAGINA_DEJA_CONFIRMAT_RAZGANDIT = _SABLON_HTML.format(
     text_status="Sedinta a fost deja confirmata. Veti fi contactat pe WhatsApp pentru clarificari."
 )
 
+# --- Aceasta Pagina a fost creata din cauza ca Previw-rile trimiteau
+# --- mesaje ca un client REAL. Pentru a evita asta modificarile din 
+# --- Calendar se fac doar la click-uri reale cu ajutorul unui JAVA script.
 # --- Pagina de "loader": raspunsul la GET, care nu are niciun efect
 # --- asupra calendarului sau email-ului. La incarcare, in orice
 # --- browser real, scriptul de mai jos trimite automat un POST catre
