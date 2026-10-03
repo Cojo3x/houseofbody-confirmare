@@ -24,6 +24,27 @@ OWNER_EMAIL = os.environ.get("OWNER_EMAIL")
 
 BASE_URL = "https://confirmare.houseofbody.ro"
 
+# ==================================================================
+# FILTRU ANTI-BOT (strat suplimentar peste pagina loader)
+# ==================================================================
+
+BOTI_CUNOSCUTI = [
+    "whatsapp", "facebookexternalhit", "facebot", "twitterbot",
+    "telegrambot", "slackbot", "slack-imgproxy", "linkedinbot",
+    "discordbot", "googlebot", "bingbot", "yandexbot", "duckduckbot",
+    "baiduspider", "ahrefsbot", "semrushbot", "mj12bot", "petalbot",
+    "skypeuripreview", "viberbot", "pinterestbot", "redditbot",
+    "applebot", "bot", "spider", "crawler", "preview", "curl",
+    "wget", "python-requests", "headlesschrome",
+]
+
+def este_bot(user_agent):
+    """Verifica daca user-agent-ul cererii se potriveste cu un bot
+    cunoscut sau cu un tipar generic de bot/crawler."""
+    if not user_agent:
+        return True
+    ua_lower = user_agent.lower()
+    return any(semn in ua_lower for semn in BOTI_CUNOSCUTI)
 
 # ==================================================================
 # SABLONUL VIZUAL SI PAGINILE SALVATE IN VARIABILE
@@ -325,6 +346,9 @@ def confirmare_client(cod, telefon):
     if request.method == 'GET':
         return PAGINA_LOADER
 
+    if este_bot(request.headers.get("User-Agent")):
+        return PAGINA_LOADER
+
     # --- de aici incolo: POST, logica reala neschimbata ---
 
     # --- Pasul 0: citeste evenimentul din calendar ---
@@ -446,6 +470,9 @@ def reprogramare_client(cod, telefon):
     if request.method == 'GET':
         return PAGINA_LOADER
 
+    if este_bot(request.headers.get("User-Agent")):
+        return PAGINA_LOADER
+    
     # --- de aici incolo: POST, logica reala neschimbata ---
 
     # --- Pasul 0: verifica daca link-ul a fost deja activat ---
