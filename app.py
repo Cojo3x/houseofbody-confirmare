@@ -446,7 +446,7 @@ def confirmare_client(cod, telefon):
 def confirmare_owner(cod, telefon):
 
     mesaj = (
-        "Buna! Programarea dumneavoastra a fost confirmata de echipa noastra. "
+        "Buna dimineata! Programarea dumneavoastra a fost confirmata de echipa noastra. "
         "Va asteptam!"
     )
 
